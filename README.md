@@ -494,9 +494,90 @@ CMD ["node", "server.js"]
 * Use slim/alpine images
 * Optimize layer order
 
-```
+Explain architecture (2-stage build)
+🟡 Stage 1: Builder image
+Uses Python slim base with pinned SHA digest
+Installs dependencies using Poetry
+Builds virtual environment (.venv)
+Produces a packaged wheel
 
+👉 Purpose:
 
-```
+“This stage is only for building and preparing dependencies, not for runtime.”
 
-```
+🔴 Stage 2: Runtime image
+Uses gcr.io/distroless/python3
+No shell, no package manager
+Only runtime + app artifacts copied
+
+👉 Purpose:
+
+“Final image contains only what is required to run the application.”
+
+🔐 3. Security explanation (VERY IMPORTANT INTERVIEW POINT)
+
+Say this clearly:
+
+✔️ Why distroless is used:
+
+“Distroless image removes shell, package managers, and unnecessary binaries, significantly reducing attack surface.”
+
+✔️ Why non-root user:
+
+“The container runs as nonroot user to follow least privilege security model.”
+
+✔️ Why pinned SHA digest:
+
+“Base images are pinned using SHA digest to ensure deterministic and reproducible builds and avoid unexpected upstream changes.”
+
+⚡ 4. Performance + optimization points
+✔️ Layer caching
+
+“Dependencies are installed before copying full source to leverage Docker layer caching and avoid reinstalling packages unnecessarily.”
+
+✔️ Multi-stage build benefit
+
+“Build tools like gcc, curl, and Poetry are excluded from final image, reducing size.”
+
+✔️ Virtual environment
+
+“Application runs in isolated Python virtual environment copied into runtime image.”
+
+📦 5. Dependency management (Poetry)
+
+Say:
+
+“Poetry is used for dependency management and building a reproducible wheel package, which is then installed into the virtual environment.”
+
+🧩 6. Why OpenTofu / Terraform step exists
+
+“Infrastructure tooling (OpenTofu/Terraform) is included inside container for runtime automation or deployment-related operations.”
+
+🧠 7. Advanced signals (mention only if asked)
+Debian snapshot repo → reproducible OS packages
+SOURCE_DATE_EPOCH → reproducible builds
+PYTHONUNBUFFERED → logging correctness in containers
+STOPSIGNAL SIGINT → graceful shutdown handling
+🎯 Final “perfect interview answer” (say this)
+
+“This is a secure, reproducible multi-stage Docker build. The first stage uses a Python slim image with Poetry to build a virtual environment and package the application. The second stage uses a distroless Python runtime image to minimize attack surface. The build is optimized using Docker layer caching, pinned base image digests for reproducibility, and non-root execution for security. The final image contains only the runtime dependencies and application artifacts, making it lightweight and production-ready.”
+
+🚀 If interviewer goes deeper, they may ask:
+❓ Why distroless instead of alpine?
+
+👉 Answer:
+
+fewer compatibility issues than Alpine musl
+more stable Python ecosystem
+❓ Why multi-stage build?
+
+👉 Answer:
+
+separates build tools from runtime
+reduces image size + improves security
+❓ Why pin SHA digest instead of tag?
+
+👉 Answer:
+
+tags can change
+SHA ensures exact immutable image version
